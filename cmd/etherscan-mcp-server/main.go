@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -16,6 +17,11 @@ import (
 )
 
 func main() {
+	// Define flags
+	useSSE := flag.Bool("sse", false, "Use SSE server mode (default is stdin/stdout)")
+	port := flag.String("port", "", "Port for SSE server (defaults to PORT env var or 4000)")
+	flag.Parse()
+
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env file not found or error loading: %v", err)
@@ -27,7 +33,19 @@ func main() {
 		log.Fatal("ETHERSCAN_API_KEY environment variable is required")
 	}
 
-	port := getEnv("PORT", "4000")
+	// Check env var for SSE mode (overrides flag if set)
+	useSSEEnv := getEnv("USE_SSE", "")
+	if useSSEEnv == "true" {
+		*useSSE = true
+	} else if useSSEEnv == "false" {
+		*useSSE = false
+	}
+
+	// If port flag not set, get from env or use default
+	if *port == "" {
+		*port = getEnv("PORT", "4000")
+	}
+
 	logLevel := getEnv("LOG_LEVEL", "info")
 
 	// Configure logging
@@ -50,6 +68,18 @@ func main() {
 	// Register tools
 	mcp.RegisterTools(mcpServer, client)
 
+	if *useSSE {
+		// SSE server mode
+		log.Printf("Starting in SSE mode...")
+		runSSEServer(mcpServer, *port)
+	} else {
+		// Default StdIO server mode
+		log.Printf("Starting in StdIO mode...")
+		runStdIOServer(mcpServer)
+	}
+}
+
+func runSSEServer(mcpServer *server.MCPServer, port string) {
 	// Create custom SSE server
 	sseServer := mcp.NewCustomSSEServer(mcpServer)
 	sseServer.WithHeartbeatInterval(25 * time.Second)
@@ -61,7 +91,7 @@ func main() {
 	// Start the server in a goroutine
 	go func() {
 		addr := fmt.Sprintf(":%s", port)
-		log.Printf("Starting Etherscan MCP Server on %s", addr)
+		log.Printf("Starting Etherscan MCP Server in SSE mode on %s", addr)
 		if err := sseServer.Start(addr); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -82,6 +112,22 @@ func main() {
 	}
 
 	log.Println("Server gracefully stopped")
+}
+
+func runStdIOServer(mcpServer *server.MCPServer) {
+	// Create custom StdIO server
+	stdioServer := mcp.NewCustomStdioServer(mcpServer)
+
+	// Configure error logger to write to stderr
+	errorLogger := log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	stdioServer.SetErrorLogger(errorLogger)
+
+	log.Printf("Starting Etherscan MCP Server in StdIO mode")
+
+	// Start listening on stdin/stdout
+	if err := stdioServer.Start(); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }
 
 func getEnv(key, defaultValue string) string {

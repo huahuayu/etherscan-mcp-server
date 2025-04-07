@@ -5,7 +5,7 @@ A Go implementation of an Etherscan API client for the [Model Context Protocol (
 ## Features
 
 - Access Etherscan API V2 for multi-chain support
-- Use a single API key for over 50 supported chains
+- Use a single API key for over [50 supported chains](https://docs.etherscan.io/etherscan-v2/getting-started/supported-chains)
 - Supports various blockchain data retrieval methods:
   - Account balances
   - Block information
@@ -17,7 +17,7 @@ A Go implementation of an Etherscan API client for the [Model Context Protocol (
 
 ## Requirements
 
-- Etherscan API key
+- Etherscan API key (get from https://etherscan.io/myapikey)
 
 ## Installation
 
@@ -34,22 +34,75 @@ A Go implementation of an Etherscan API client for the [Model Context Protocol (
 
 3. Build the server:
    ```bash
-   chmod +x build.sh
-   ./build.sh
+   make build
+   ```
+
+4. Install the server:
+   ```bash
+   make install # install to /usr/local/bin
    ```
 
 ## Usage
 
-Run the server:
+### Default Mode (Standard Input/Output)
+
+Run the server using stdin/stdout communication (default mode):
 ```bash
 ./bin/etherscan-mcp-server
 ```
 
-The server will start and listen on the port specified in your .env file (default: 4000).
+This mode is useful for direct integration with LLM applications that communicate via stdin/stdout.
 
-### Connection Methods
+MCP config:
+```json
+{
+  "mcpServers": {
+    "etherscan-mcp-server": {
+      "command": "etherscan-mcp-server",
+      "env": {
+        "ETHERSCAN_API_KEY": "$your_api_key"
+      }
+    }
+   }
+}
+```
 
-The server supports Server-Sent Events (SSE) connections:
+Restart cursor and check if it's success:
+
+![](https://cdn.0xbuilder.com/img/20250407121209988.png)
+
+
+### SSE Mode
+
+Run the server in Server-Sent Events mode:
+```bash
+./bin/etherscan-mcp-server --sse
+```
+
+In SSE mode, the server listens on HTTP and provides an SSE endpoint.
+
+SSE MCP config:
+```json
+{
+  "mcpServers": {
+    "etherscan-mcp-server": {
+      "url": "http://localhost:4000/sse",
+      "env": {
+        "ETHERSCAN_API_KEY": "$your_api_key"
+      }
+    }
+   }
+}
+```
+
+#### Server Options
+
+- `--sse`: Enable SSE server mode (default is stdin/stdout mode)
+- `--port <port>`: Specify the port for SSE server (defaults to PORT env var or 4000)
+
+### Connection Endpoints (SSE Mode)
+
+When running in SSE mode, the server provides:
 
 - **SSE Endpoint**: `http://localhost:4000/sse`
 
@@ -63,11 +116,11 @@ You can use natural language queries like these:
 
 ### Account and Balance Information
 - "What's the ETH balance of address 0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae?"
-- "Show me the token balance for USDT on address 0x123abc... on Ethereum"
+- "Show me the token balance for USDT on address 0x123abc... on BSC"
 - "How many transactions has 0xvitalik.eth made from this address?"
 
 ### Block Information
-- "Get information about the latest Ethereum block"
+- "Get information about the latest Polygon block"
 - "What are the rewards for miners in block 17000000?"
 - "Who mined block 16900000 on Ethereum?"
 
