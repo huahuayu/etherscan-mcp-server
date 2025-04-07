@@ -149,6 +149,32 @@ You can use natural language queries like these:
 - "Which addresses received the most ETH in block 17000000?"
 - "Compare gas usage on Ethereum vs Arbitrum for similar transactions"
 
+## Available Tools
+
+The Etherscan MCP Server provides the following tools for accessing blockchain data:
+
+1. **getAccountBalance** - Get the balance of an account on a specific blockchain
+2. **getBlockByNumber** - Get block information by block number
+3. **getBlockRewards** - Get block rewards by block number
+4. **getContractABI** - Get the ABI for a verified contract
+5. **getContractSourceCode** - Get the source code of a verified contract
+6. **executeContractMethod** - Execute a read contract function
+7. **getGasOracle** - Get current gas price oracle output
+8. **getTokenBalance** - Get the token balance of an account on a specific blockchain
+9. **getTokenDetails** - Get comprehensive token information
+10. **getTransactionByHash** - Get transaction details by hash
+11. **getTransactionByBlockNumberAndIndex** - Get transaction by block number and index
+12. **getTransactionCount** - Get the number of transactions sent from an address
+13. **getTransactionReceipt** - Check transaction receipt status
+14. **getTransactionStatus** - Check contract execution status
+15. **getTransactionsByAddress** - Get list of transactions by address
+16. **getInternalTransactionsByAddress** - Get list of internal transactions by address
+17. **getTokenTransfersByAddress** - Get list of token transfers by address
+18. **getERC721Transfers** - Get list of ERC721 token transfers by address
+19. **getLatestBlockNumber** - Get the latest block number
+
+Each tool accepts specific parameters and provides blockchain data in a structured format.
+
 ## License
 
 MIT
