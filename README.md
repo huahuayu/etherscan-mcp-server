@@ -22,17 +22,20 @@ A Go implementation of an Etherscan API client for the [Model Context Protocol (
 ## Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/huahuayu/etherscan-mcp-server.git
    cd etherscan-mcp-server
    ```
 
 2. Set Etherscan API key env variable:
+
    ```bash
    ETHERSCAN_API_KEY=your_api_key_here
    ```
 
 3. Build the server:
+
    ```bash
    make build
    ```
@@ -47,6 +50,7 @@ A Go implementation of an Etherscan API client for the [Model Context Protocol (
 ### Default Mode (Standard Input/Output)
 
 Run the server using stdin/stdout communication (default mode):
+
 ```bash
 ./bin/etherscan-mcp-server
 ```
@@ -54,6 +58,7 @@ Run the server using stdin/stdout communication (default mode):
 This mode is useful for direct integration with LLM applications that communicate via stdin/stdout.
 
 MCP config:
+
 ```json
 {
   "mcpServers": {
@@ -63,7 +68,7 @@ MCP config:
         "ETHERSCAN_API_KEY": "$your_api_key"
       }
     }
-   }
+  }
 }
 ```
 
@@ -71,10 +76,10 @@ Restart cursor and check if it's success:
 
 ![](https://cdn.0xbuilder.com/img/20250407121209988.png)
 
-
 ### SSE Mode
 
 Run the server in Server-Sent Events mode:
+
 ```bash
 ./bin/etherscan-mcp-server --sse
 ```
@@ -82,6 +87,7 @@ Run the server in Server-Sent Events mode:
 In SSE mode, the server listens on HTTP and provides an SSE endpoint.
 
 SSE MCP config:
+
 ```json
 {
   "mcpServers": {
@@ -91,7 +97,7 @@ SSE MCP config:
         "ETHERSCAN_API_KEY": "$your_api_key"
       }
     }
-   }
+  }
 }
 ```
 
@@ -110,49 +116,76 @@ When running in SSE mode, the server provides:
 
 50+ chains supported, please refer to the [Etherscan V2 Supported Chains](https://docs.etherscan.io/supported-chains) for a complete list and their corresponding Chain IDs.
 
-> **Note on Free Tier Limitations:**
+> **Note on Free Tier Limitations & RPC Fallback:**
 > According to Etherscan's [supported chains policy](https://docs.etherscan.io/supported-chains), some networks are **not available** under the Free API plan. These include (but are not limited to):
-> - **BNB Smart Chain (BSC)**
-> - **Base**
-> - **Avalanche C-Chain**
 >
-> To access these chains via the Etherscan V2 API, a paid tier plan is required.
+> - **BNB Smart Chain (BSC)** — Chain ID: 56
+> - **Base** — Chain ID: 8453
+> - **Avalanche C-Chain** — Chain ID: 43114
+>
+> For these three chains, this server has a **built-in RPC fallback mechanism**: when the Etherscan API returns `NOTOK`, it automatically falls back to free public RPC endpoints using standard JSON-RPC methods. **No paid plan is needed** for the following tools on these chains:
+>
+> | Tool                    | JSON-RPC Method                   |
+> | ----------------------- | --------------------------------- |
+> | `getLatestBlockNumber`  | `eth_blockNumber`                 |
+> | `getAccountBalance`     | `eth_getBalance`                  |
+> | `getTokenBalance`       | `eth_call` (balanceOf)            |
+> | `getTokenDetails`       | `eth_call` (name/symbol/decimals) |
+> | `getTransactionByHash`  | `eth_getTransactionByHash`        |
+> | `getTransactionReceipt` | `eth_getTransactionReceipt`       |
+> | `getTransactionCount`   | `eth_getTransactionCount`         |
+> | `executeContractMethod` | `eth_call`                        |
+>
+> **RPC Endpoints Used:**
+>
+> - BSC: `https://binance.llamarpc.com`
+> - Base: `https://base.llamarpc.com`
+> - Avalanche C-Chain: `https://api.avax.network/ext/bc/C/rpc`
+>
+> Other Etherscan-specific tools (e.g., `getContractABI`, `getTransactionsByAddress`) still require the Etherscan paid plan for these chains.
 
 ## Example Queries
 
 You can use natural language queries like these:
 
 ### Account and Balance Information
+
 - "What's the ETH balance of address 0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae?"
 - "Show me the token balance for USDT on address 0x123abc... on BSC"
 - "How many transactions has 0xvitalik.eth made from this address?"
 
 ### Block Information
+
 - "Get information about the latest Polygon block"
 - "What are the rewards for miners in block 17000000?"
 - "Who mined block 16900000 on Ethereum?"
 
 ### Contract Interaction
+
 - "Show me the source code at 0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
 - "What's the ABI for the USDC contract on Polygon?"
 - "Call the balanceOf function of USDT contract with my address as parameter"
 
 ### Transaction Information
+
 - "Give me details for transaction 0x123456789abcdef..."
 - "Has transaction 0xabcdef... been confirmed yet?"
 - "What was the gas price used in transaction 0x789abc..."
 
 ### Gas and Network
+
 - "What are the current gas prices on Ethereum?"
 - "What's the recommended gas price for a fast transaction right now?"
 - "How many transactions are pending on Ethereum network?"
 
 ### Token Information
+
 - "Tell me about the LINK token contract"
 - "What ERC-721 NFTs does address 0x123... own?"
 - "Show recent token transfers for 0xvitalik.eth"
 
 ### Custom Queries
+
 - "Track all USDC transfers to Binance hot wallet in the last 1000 blocks"
 - "Which addresses received the most ETH in block 17000000?"
 - "Compare gas usage on Ethereum vs Arbitrum for similar transactions"

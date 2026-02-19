@@ -2,6 +2,7 @@ package etherscan
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,6 +38,14 @@ type JSONRPCResponse struct {
 type JSONRPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+// ErrNotFreeAPI is returned when Etherscan API denies access for non-free chains
+var ErrNotFreeAPI = errors.New("etherscan API: this chain requires a paid plan")
+
+// IsNotFreeAPIError checks if an error is caused by a non-free API response
+func IsNotFreeAPIError(err error) bool {
+	return errors.Is(err, ErrNotFreeAPI)
 }
 
 // Error represents an API error
@@ -115,6 +124,10 @@ func (c *Client) Request(chainID string, module, action string, params map[strin
 
 	// Check for errors in standard response
 	if response.Status != "1" && response.Status != "" {
+		// Detect non-free API error (NOTOK typically means the chain requires a paid plan)
+		if response.Status == "0" && response.Message == "NOTOK" {
+			return nil, fmt.Errorf("%w: %s", ErrNotFreeAPI, string(response.Result))
+		}
 		return nil, &Error{
 			Status:  response.Status,
 			Message: response.Message,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/huahuayu/etherscan-mcp-server/internal/etherscan"
 	"github.com/huahuayu/etherscan-mcp-server/internal/mcp"
+	"github.com/huahuayu/etherscan-mcp-server/internal/rpc"
 	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -59,6 +60,9 @@ func main() {
 	// Initialize Etherscan client
 	client := etherscan.NewClient(apiKey)
 
+	// Initialize RPC client for fallback
+	rpcClient := rpc.NewClient()
+
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"Etherscan MCP Server",
@@ -66,7 +70,7 @@ func main() {
 	)
 
 	// Register tools
-	mcp.RegisterTools(mcpServer, client)
+	mcp.RegisterTools(mcpServer, client, rpcClient)
 
 	if *useSSE {
 		// SSE server mode

@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/huahuayu/etherscan-mcp-server/internal/etherscan"
+	"github.com/huahuayu/etherscan-mcp-server/internal/rpc"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 // RegisterTools registers all the Etherscan API tools with the MCP server
-func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
+func RegisterTools(s *server.MCPServer, client *etherscan.Client, rpcClient *rpc.Client) {
 	// 1. Get Account Balance
 	accountBalanceTool := mcp.NewTool("getAccountBalance",
 		mcp.WithDescription("Get the balance of an account on a specific blockchain"),
@@ -23,7 +24,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(accountBalanceTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetAccountBalance(ctx, request, client)
+		return handleGetAccountBalance(ctx, request, client, rpcClient)
 	})
 
 	// 2. Get Block By Number
@@ -110,7 +111,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(executeContractMethodTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleExecuteContractMethod(ctx, request, client)
+		return handleExecuteContractMethod(ctx, request, client, rpcClient)
 	})
 
 	// 7. Get Gas Oracle
@@ -142,7 +143,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(tokenBalanceTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetTokenBalance(ctx, request, client)
+		return handleGetTokenBalance(ctx, request, client, rpcClient)
 	})
 
 	// 9. Get Token Details
@@ -158,7 +159,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(tokenDetailsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetTokenDetails(ctx, request, client)
+		return handleGetTokenDetails(ctx, request, client, rpcClient)
 	})
 
 	// 10. Get Transaction By Hash
@@ -174,7 +175,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(transactionByHashTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetTransactionByHash(ctx, request, client)
+		return handleGetTransactionByHash(ctx, request, client, rpcClient)
 	})
 
 	// 10a. Get Transaction By Block Number And Index
@@ -213,7 +214,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(transactionCountTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetTransactionCount(ctx, request, client)
+		return handleGetTransactionCount(ctx, request, client, rpcClient)
 	})
 
 	// 10c. Get Transaction Receipt Status
@@ -229,7 +230,7 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(transactionReceiptTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetTransactionReceipt(ctx, request, client)
+		return handleGetTransactionReceipt(ctx, request, client, rpcClient)
 	})
 
 	// 10c. Get Transaction Status
@@ -375,6 +376,6 @@ func RegisterTools(s *server.MCPServer, client *etherscan.Client) {
 		),
 	)
 	s.AddTool(latestBlockNumberTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return handleGetLatestBlockNumber(ctx, request, client)
+		return handleGetLatestBlockNumber(ctx, request, client, rpcClient)
 	})
 }

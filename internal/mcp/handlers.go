@@ -3,13 +3,15 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/huahuayu/etherscan-mcp-server/internal/etherscan"
+	"github.com/huahuayu/etherscan-mcp-server/internal/rpc"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // Handler functions
-func handleGetAccountBalance(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetAccountBalance(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -22,6 +24,14 @@ func handleGetAccountBalance(ctx context.Context, request mcp.CallToolRequest, c
 
 	balance, err := client.GetAccountBalance(chainID, address)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			balance, err = rpcClient.GetBalance(chainID, address)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(fmt.Sprintf(`{"balance": "%s"}`, balance)), nil
+		}
 		return nil, err
 	}
 
@@ -104,7 +114,7 @@ func handleGetContractSourceCode(ctx context.Context, request mcp.CallToolReques
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleExecuteContractMethod(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleExecuteContractMethod(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -122,8 +132,22 @@ func handleExecuteContractMethod(ctx context.Context, request mcp.CallToolReques
 
 	methodParams, _ := request.Params.Arguments["methodParams"].(string)
 
+	// Build data: methodABI is the function selector (e.g. 0x...), methodParams appended
+	data := methodABI
+	if methodParams != "" {
+		data = methodABI + methodParams
+	}
+
 	result, err := client.ExecuteContractMethod(chainID, contractAddress, methodABI, methodParams)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			result, err = rpcClient.EthCall(chainID, contractAddress, data)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(string(result)), nil
+		}
 		return nil, err
 	}
 
@@ -144,7 +168,7 @@ func handleGetGasOracle(ctx context.Context, request mcp.CallToolRequest, client
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleGetTokenBalance(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetTokenBalance(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -162,13 +186,21 @@ func handleGetTokenBalance(ctx context.Context, request mcp.CallToolRequest, cli
 
 	balance, err := client.GetTokenBalance(chainID, contractAddress, address)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			balance, err = rpcClient.GetTokenBalance(chainID, contractAddress, address)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(fmt.Sprintf(`{"balance": "%s"}`, balance)), nil
+		}
 		return nil, err
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf(`{"balance": "%s"}`, balance)), nil
 }
 
-func handleGetTokenDetails(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetTokenDetails(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -181,13 +213,21 @@ func handleGetTokenDetails(ctx context.Context, request mcp.CallToolRequest, cli
 
 	result, err := client.GetTokenDetails(chainID, contractAddress)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			result, err = rpcClient.GetTokenDetails(chainID, contractAddress)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(string(result)), nil
+		}
 		return nil, err
 	}
 
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleGetTransactionByHash(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetTransactionByHash(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -200,13 +240,21 @@ func handleGetTransactionByHash(ctx context.Context, request mcp.CallToolRequest
 
 	result, err := client.GetTransactionByHash(chainID, txHash)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			result, err = rpcClient.GetTransactionByHash(chainID, txHash)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(string(result)), nil
+		}
 		return nil, err
 	}
 
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleGetTransactionReceipt(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetTransactionReceipt(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -219,6 +267,14 @@ func handleGetTransactionReceipt(ctx context.Context, request mcp.CallToolReques
 
 	result, err := client.GetTransactionReceipt(chainID, txHash)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			result, err = rpcClient.GetTransactionReceipt(chainID, txHash)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(string(result)), nil
+		}
 		return nil, err
 	}
 
@@ -400,7 +456,7 @@ func handleGetERC721Transfers(ctx context.Context, request mcp.CallToolRequest, 
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleGetLatestBlockNumber(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetLatestBlockNumber(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -408,6 +464,14 @@ func handleGetLatestBlockNumber(ctx context.Context, request mcp.CallToolRequest
 
 	blockNumber, err := client.GetLatestBlockNumber(chainID)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			blockNumber, err = rpcClient.BlockNumber(chainID)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(fmt.Sprintf(`{"blockNumber": "%s"}`, blockNumber)), nil
+		}
 		return nil, err
 	}
 
@@ -438,7 +502,7 @@ func handleGetTransactionByBlockNumberAndIndex(ctx context.Context, request mcp.
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-func handleGetTransactionCount(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client) (*mcp.CallToolResult, error) {
+func handleGetTransactionCount(ctx context.Context, request mcp.CallToolRequest, client *etherscan.Client, rpcClient *rpc.Client) (*mcp.CallToolResult, error) {
 	chainID, ok := request.Params.Arguments["chainID"].(string)
 	if !ok {
 		return nil, fmt.Errorf("chainID must be a string")
@@ -453,6 +517,14 @@ func handleGetTransactionCount(ctx context.Context, request mcp.CallToolRequest,
 
 	result, err := client.GetTransactionCount(chainID, address, tag)
 	if err != nil {
+		if etherscan.IsNotFreeAPIError(err) && rpc.IsRPCFallbackChain(chainID) {
+			log.Printf("Etherscan API not free for chain %s, falling back to RPC", chainID)
+			result, err = rpcClient.GetTransactionCount(chainID, address, tag)
+			if err != nil {
+				return nil, fmt.Errorf("RPC fallback failed: %w", err)
+			}
+			return mcp.NewToolResultText(string(result)), nil
+		}
 		return nil, err
 	}
 
