@@ -108,7 +108,15 @@ When running in SSE mode, the server provides:
 
 ## Supported Chains
 
-50+ chains supported, plz refer https://docs.etherscan.io/etherscan-v2/getting-started/supported-chains
+50+ chains supported, please refer to the [Etherscan V2 Supported Chains](https://docs.etherscan.io/supported-chains) for a complete list and their corresponding Chain IDs.
+
+> **Note on Free Tier Limitations:**
+> According to Etherscan's [supported chains policy](https://docs.etherscan.io/supported-chains), some networks are **not available** under the Free API plan. These include (but are not limited to):
+> - **BNB Smart Chain (BSC)**
+> - **Base**
+> - **Avalanche C-Chain**
+>
+> To access these chains via the Etherscan V2 API, a paid tier plan is required.
 
 ## Example Queries
 
